@@ -2,34 +2,39 @@
 
 """
 a standalone utility to convert plain mmp to midi files
-(basically used to tinker with the mmp format)
+author: Mohamed Abdel Maksoud (mohamed at amaksoud.com)
 """
 
-import IPython
 import sys
 import xml.etree.ElementTree as ET
 from midiutil.MidiFile import MIDIFile
 
 
 
-if __name__ == '__main__':
-    doc = ET.parse(sys.argv[1])
-    head = doc.find('.//head').attrib
+def Main(fname):
+    doc = ET.parse(fname)
+    # find bpm
+    bpm = 120.0
+    head = doc.find('.//head')
+    if 'bpm' in head.attrib:
+        bmp = float(head.attrib['bpm'])
+    else:
+        head = doc.find('.//head/bpm')
+        if head is not None and 'value' in head.attrib: bmp = float(head.attrib['value'])
     # collect sensible tracks
     tracks = []
     for t in doc.getroot().findall('song//track'):
-        #IPython.embed()
-        print "testing track ", t.attrib
+        #print "testing track ", t.attrib
         if t.find('instrumenttrack') is not None and t.find('pattern/note') is not None:
             tracks.append(t)
     
     midif = MIDIFile(len(tracks))
-    print "%d tracks" %(len(tracks))
+    #print "%d tracks" %(len(tracks))
     thistrack = 0
     for track in tracks: #doc.findall('song//track'):
         channel = 0
         midif.addTrackName(thistrack, 0, track.attrib['name'])
-        midif.addTempo(thistrack, channel, float(head['bpm']) )
+        midif.addTempo(thistrack, channel, bpm )
         midif.addProgramChange(thistrack, channel, 0, 0)
         #print "> adding track ", track.attrib['name']
         
@@ -52,3 +57,11 @@ if __name__ == '__main__':
     foutname = sys.argv[1].replace('.mmp', '') + '.mid'
     with open(foutname, 'wb') as f: midif.writeFile(f)
     print "MIDI file written to %s" %(foutname)
+
+
+if __name__ == '__main__':
+    Main(sys.argv[1])
+    #try:
+        #Main(sys.argv[1])
+    #except:
+        #print "E: couldn't convert the input file. usage:\n\t%s <mmp file>" %(sys.argv[0])
